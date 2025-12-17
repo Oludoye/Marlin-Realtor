@@ -1,0 +1,127 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+///////////////////////
+// ENUMS
+///////////////////////
+enum UserRole {
+  TEAM_MEMBER
+  AGENT
+  ADMIN
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  PENDING
+}
+
+// Add this new enum
+enum UserStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+///////////////////////
+// USER MODEL
+///////////////////////
+model User {
+  id           Int             @id @default(autoincrement())
+  name         String
+  email        String          @unique
+  password     String
+  image        String?
+  phone        String?
+  role         UserRole  // default(TEAM_MEMBER)
+  status       UserStatus @default(PENDING)
+  listings     Listing[] // One-to-many: User can have multiple listings
+  saved        SavedProperty[] // Saved properties by this user
+  transactions Transaction[] // Transactions by this user
+  agentProfile AgentProfile? // Optional one-to-one if user is an agent
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+///////////////////////
+// AGENT PROFILE MODEL
+///////////////////////
+model AgentProfile {
+  id       Int       @id @default(autoincrement())
+  bio      String?
+  user     User      @relation(fields: [userId], references: [id])
+  userId   Int       @unique
+  listings Listing[] // Listings by this agent
+}
+
+///////////////////////
+// LISTING MODEL
+///////////////////////
+model Listing {
+  id             Int             @id @default(autoincrement())
+  title          String
+  description    String
+  price          Int
+  images         String  @default("[]")       
+  city           String?
+  state          String?
+  type           String
+  status         ListingStatus   @default(ACTIVE)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  agentProfile   AgentProfile?   @relation(fields: [agentProfileId], references: [id])
+  agentProfileId Int?
+  savedBy        SavedProperty[] // Many-to-many through SavedProperty
+  transactions   Transaction[] // Transactions for this listing
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+///////////////////////
+// SAVED PROPERTY MODEL
+///////////////////////
+model SavedProperty {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId Int
+  createdAt DateTime @default(now())
+}
+
+///////////////////////
+// TRANSACTION MODEL
+///////////////////////
+model Transaction {
+  id        Int           @id @default(autoincrement())
+  user      User          @relation(fields: [userId], references: [id])
+  userId    Int
+  listing   Listing       @relation(fields: [listingId], references: [id])
+  listingId Int
+  price     Int
+  status    ListingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+}
+
+//model Testimonial {
+//  id        Int      @id @default(autoincrement())
+//  name      String
+ // message   String
+//  rating    Int
+//  createdAt DateTime @default(now())
+//}
+
+//model ListingImage {
+ // id         Int      @id @default(autoincrement())
+//  url        String
+ // listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+ // listingId Int
+//}
